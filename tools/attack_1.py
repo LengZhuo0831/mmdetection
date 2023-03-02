@@ -70,6 +70,7 @@ def main():
     test_dataloader_default_args = dict(
         samples_per_gpu=1, workers_per_gpu=2, dist=distributed, shuffle=False)
     # in case the test dataset is concatenated
+
     if isinstance(cfg.data.test, dict):
         cfg.data.test.test_mode = True
         if cfg.data.test_dataloader.get('samples_per_gpu', 1) > 1:
@@ -83,6 +84,21 @@ def main():
             for ds_cfg in cfg.data.test:
                 ds_cfg.pipeline = replace_ImageToTensor(ds_cfg.pipeline)
 
+    runner_type = 'EpochBasedRunner'
+    train_dataloader_default_args = dict(
+        samples_per_gpu=2,
+        workers_per_gpu=2,
+        # `num_gpus` will be ignored if distributed
+        num_gpus=len(cfg.gpu_ids),
+        dist=distributed,
+        seed=cfg.seed,
+        runner_type=runner_type,
+        persistent_workers=False)
+
+    train_loader_cfg = {
+        **train_dataloader_default_args,
+        **cfg.data.get('train_dataloader', {})
+    }
     test_loader_cfg = {
         **test_dataloader_default_args,
         **cfg.data.get('test_dataloader', {})
@@ -101,7 +117,7 @@ def main():
 
     # build the model and load checkpoint
     cfg.model.train_cfg = None
-    model = build_detector(cfg.model, test_cfg=cfg.get('test_cfg'))
+    model = build_detector(cfg.model, train_cfg=cfg.get('train_cfg'), test_cfg=cfg.get('test_cfg'))
     # init rfnext if 'RFSearchHook' is defined in cfg
     rfnext_init_model(model, cfg=cfg)
     fp16_cfg = cfg.get('fp16', None)
@@ -120,16 +136,14 @@ def main():
     if not distributed:
         model = build_dp(model, cfg.device, device_ids=[0])
         # TODO: test, attack again and again
-        outputs = single_gpu_attack(model, data_loader, args)
     else:
         model = build_ddp(
             model,
             cfg.device,
             device_ids=[int(os.environ['LOCAL_RANK'])],
             broadcast_buffers=False)
-        if cfg.device == 'npu' and args.tmpdir is None:
-            args.tmpdir = './npu_tmpdir'
-        outputs = multi_gpu_attack(model, data_loader, args)
+        
+    
     
 
 

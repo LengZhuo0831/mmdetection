@@ -89,4 +89,5 @@ def get_device():
         'mlu': is_mlu_available()
     }
     device_list = [k for k, v in is_device_available.items() if v]
+    return 'cpu'
     return device_list[0] if len(device_list) >= 1 else 'cpu'

@@ -132,6 +132,7 @@ class CocoDataset(CustomDataset):
         ids_in_cat &= ids_with_ann
 
         valid_img_ids = []
+        self.filter_empty_gt=False
         for i, img_info in enumerate(self.data_infos):
             img_id = self.img_ids[i]
             if self.filter_empty_gt and img_id not in ids_in_cat:

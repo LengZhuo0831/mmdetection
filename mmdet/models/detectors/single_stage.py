@@ -82,7 +82,7 @@ class SingleStageDetector(BaseDetector):
         x = self.extract_feat(img)
         losses = self.bbox_head.forward_train(x, img_metas, gt_bboxes,
                                               gt_labels, gt_bboxes_ignore)
-        return losses
+        return losses, img
 
     def simple_test(self, img, img_metas, rescale=False):
         """Test function without test-time augmentation.
